@@ -1,0 +1,29 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Extract Changelog
+        id: changelog
+        run: |
+          curl -L https://github.com/streamingfast/sfreleaser/releases/download/v0.16.0/sfreleaser_linux_x86_64.tar.gz | tar -xz
+          chmod +x sfreleaser
+
+          ./sfreleaser changelog extract-section \
+            github://token:${{ github.token }}@${{ github.repository }}/$GITHUB_SHA/CHANGELOG.md \
+            "${GITHUB_REF_NAME}" \
+            --github-output="changelog:$GITHUB_OUTPUT"
+
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          body: ${{ steps.changelog.outputs.changelog }}

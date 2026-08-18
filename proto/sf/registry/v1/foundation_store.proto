@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+package sf.registry.v1;
+
+option go_package = "github.com/streamingfast/dregistry/pb/sf/registry/v1;pbregistry";
+
+// FoundationStoreRegistryService resolves a foundational-store deployment
+// to its public and internal gRPC endpoints.
+service FoundationStoreRegistryService {
+  // GetFoundationStore looks up a single foundational-store entry by deployment id.
+  rpc GetFoundationStore(GetFoundationStoreRequest) returns (GetFoundationStoreResponse);
+}
+
+message GetFoundationStoreRequest {
+  string deployment_id = 1;
+}
+
+message GetFoundationStoreResponse {
+  // found is true when an entry exists for the requested deployment id.
+  bool found = 1;
+  string message = 2;
+  FoundationStoreEntry entry = 3;
+}
+
+message FoundationStoreEntry {
+  string deployment_id = 1;
+  string network = 2;
+
+  // Public gRPC endpoint for internet / unknown-network consumers,
+  // e.g. "{deployment-id}.hs.acme.example:443"
+  string endpoint = 3;
+  bool tls = 4;
+  bool auth_required = 5;
+
+  // Private gRPC endpoint for peered-VPC / internal-gateway consumers
+  // (no NAT hairpin), e.g. "{deployment-id}.hs-internal.acme.example:9000"
+  string internal_endpoint = 6;
+  bool internal_tls = 7;
+}

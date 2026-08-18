@@ -1,0 +1,63 @@
+name: Buf
+
+on:
+  pull_request:
+  push:
+    tags:
+      - v*
+    branches:
+      - master
+
+jobs:
+  buf:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup buf
+        uses: bufbuild/buf-setup-action@v1
+        with:
+          github_token: ${{ github.token }}
+
+      - name: Lint protos
+        uses: bufbuild/buf-lint-action@v1
+        with:
+          input: proto
+
+      - name: Detect proto on base branch
+        if: github.event_name == 'pull_request'
+        id: base_proto
+        run: |
+          git fetch --depth=1 origin "${{ github.base_ref }}"
+          if git cat-file -e "origin/${{ github.base_ref }}:proto/buf.yaml" 2>/dev/null; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Check for breaking changes
+        if: github.event_name == 'pull_request' && steps.base_proto.outputs.exists == 'true'
+        uses: bufbuild/buf-breaking-action@v1
+        with:
+          input: proto
+          against: "https://github.com/${{ github.repository }}.git#branch=${{ github.base_ref }},subdir=proto"
+
+      - name: Push to Buf registry
+        if: github.event_name != 'pull_request'
+        env:
+          BUF_TOKEN: ${{ secrets.BUF_TOKEN }}
+        run: |
+          # --git-metadata automatically sets labels based on git branches/tags
+          # and source-control-url from the git remote
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            # For tags, also push to 'main' label so docs stay up to date
+            echo "Running: buf push proto --git-metadata --label main"
+            buf push proto --git-metadata --label main
+          else
+            echo "Running: buf push proto --git-metadata"
+            buf push proto --git-metadata
+          fi

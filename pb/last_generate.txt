@@ -1,0 +1,2 @@
+generate.sh - Tue Aug 18 13:52:08 EDT 2026 - maoueh
+streamingfast/dregistry revision: 4d13a30f20013b2ee9f65ebad651a37f4721ec85
